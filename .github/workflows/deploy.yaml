@@ -1,0 +1,79 @@
+name: Build and deploy
+
+on:
+  push:
+    branches-ignore:
+      - 'dependabot/**'
+
+jobs:
+  build:
+    name: Build and publish Docker image
+    runs-on: ubuntu-latest
+    permissions:
+      contents: "read"
+      id-token: "write"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          cache: npm
+          node-version: 22
+
+      - run: npm run build
+
+      - name: docker-build-push
+        uses: nais/docker-build-push@v0
+        id: docker-build-push
+        with:
+          team: teamdagpenger
+          tag: ${{ github.sha }}
+          identity_provider: ${{ secrets.NAIS_WORKLOAD_IDENTITY_PROVIDER }}
+          project_id: ${{ vars.NAIS_MANAGEMENT_PROJECT_ID }}
+          salsa: false
+    outputs:
+      image: ${{ steps.docker-build-push.outputs.image }}
+      digest: ${{ steps.docker-build-push.outputs.digest }}
+
+  salsa:
+    name: Generate SBOM, attest and sign image
+    needs: [ build ]
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: "write"
+    steps:
+      - uses: navikt/dagpenger/actions/attest-sign@master
+        with:
+          digest: ${{ needs.build.outputs.digest }}
+          identity_provider: ${{ secrets.NAIS_WORKLOAD_IDENTITY_PROVIDER }}
+          project_id: ${{ vars.NAIS_MANAGEMENT_PROJECT_ID }}
+          team: teamdagpenger
+
+  deploy-dev:
+    name: Deploy to dev
+    needs: [ build ]
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: dev-gcp
+    steps:
+      - uses: actions/checkout@v4
+      - uses: nais/deploy/actions/deploy@v2
+        env:
+          CLUSTER: dev-gcp
+          RESOURCE: .nais/nais.yaml,
+          VAR: image=${{ needs.build.outputs.image }}
+          PRINT_PAYLOAD: true
+
+  deploy-prod:
+    name: Deploy to Production
+    needs: [ build ]
+    if: github.ref == 'refs/heads/mainZZ'
+    runs-on: ubuntu-latest
+    environment: prod-gcp
+    steps:
+      - uses: actions/checkout@v4
+      - uses: nais/deploy/actions/deploy@v2
+        env:
+          CLUSTER: prod-gcp
+          RESOURCE: .nais/nais.yaml,
+          VAR: image=${{ needs.build.outputs.image }}
+          PRINT_PAYLOAD: true

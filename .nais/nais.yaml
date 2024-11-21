@@ -1,0 +1,36 @@
+apiVersion: nais.io/v1alpha1
+kind: Application
+metadata:
+  name: dp-behandling
+  namespace: teamdagpenger
+  labels:
+    team: teamdagpenger
+spec:
+  image: "{{ image }}"
+  port: 3000
+  liveness:
+    path: /isalive
+  resources:
+    limits:
+      memory: 512Mi
+    requests:
+      cpu: 50m
+      memory: 384Mi
+  env:
+    - name: KAFKA_CONNECT_REST_URL
+      value: http://dp-kafka-connect:8083
+  accessPolicy:
+    outbound:
+      rules:
+        - application: dp-kafka-connect
+  azure:
+    application:
+      enabled: true
+      tenant: nav.no
+      claims:
+        groups:
+          - id: 7e7a9ef8-d9ba-445b-bb91-d2b3c10a0c13
+  observability:
+    autoInstrumentation:
+      enabled: true
+      runtime: nodejs
