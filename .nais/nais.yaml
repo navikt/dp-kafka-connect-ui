@@ -16,6 +16,8 @@ spec:
     requests:
       cpu: 50m
       memory: 384Mi
+  ingresses:
+    - https://dp-kafka-connect-ui.intern.dev.nav.no
   env:
     - name: KAFKA_CONNECT_REST_URL
       value: http://dp-kafka-connect:8083
