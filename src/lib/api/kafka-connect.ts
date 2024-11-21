@@ -1,4 +1,3 @@
-// /lib/api/kafkaConnect.ts
 import { ApiResponse, ApiResponseSchema } from "@/schemas/kafka-connect";
 import { TaskStatus } from "@/components/kafka-connect-visualizer";
 

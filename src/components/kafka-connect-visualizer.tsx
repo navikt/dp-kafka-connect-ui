@@ -58,6 +58,7 @@ function getStatusIcon(status: string) {
       return null;
   }
 }
+
 export function KafkaConnectVisualizerComponent({ connectors }: Props) {
   return (
     <div className="container mx-auto px-4 py-8 ">
