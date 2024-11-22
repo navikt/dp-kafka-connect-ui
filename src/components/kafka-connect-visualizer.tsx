@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import {
   Table,
   TableBody,
@@ -29,68 +28,11 @@ import {
   AlertCircle,
   MoreVertical,
   ChevronDown,
-  ChevronUp,
   Play,
   Pause,
   RotateCw,
 } from "lucide-react";
 import { Connector } from "@/schemas/ui";
-
-const mockKafkaConnectData = {
-  name: "My Kafka Connect Instance",
-  connectors: [
-    {
-      name: "Source Connector 1",
-      type: "source",
-      tasks: [
-        { id: 0, status: "running" },
-        { id: 1, status: "running" },
-        { id: 2, status: "failed" },
-      ],
-      config: {
-        "connector.class": "io.confluent.connect.jdbc.JdbcSourceConnector",
-        "tasks.max": "3",
-        "connection.url": "jdbc:mysql://localhost:3306/test_database",
-        mode: "incrementing",
-        "incrementing.column.name": "id",
-        "topic.prefix": "mysql-",
-      },
-    },
-    {
-      name: "Sink Connector 1",
-      type: "sink",
-      tasks: [
-        { id: 0, status: "running" },
-        { id: 1, status: "running" },
-      ],
-      config: {
-        "connector.class":
-          "io.confluent.connect.elasticsearch.ElasticsearchSinkConnector",
-        "tasks.max": "2",
-        topics: "mysql-users",
-        "connection.url": "http://localhost:9200",
-        "type.name": "kafka-connect",
-      },
-    },
-    {
-      name: "Source Connector 2",
-      type: "source",
-      tasks: [
-        { id: 0, status: "running" },
-        { id: 1, status: "paused" },
-      ],
-      config: {
-        "connector.class": "io.confluent.connect.s3.S3SourceConnector",
-        "tasks.max": "2",
-        "s3.bucket.name": "my-bucket",
-        "s3.region": "us-west-2",
-        "format.class": "io.confluent.connect.s3.format.json.JsonFormat",
-        "partitioner.class":
-          "io.confluent.connect.storage.partitioner.DefaultPartitioner",
-      },
-    },
-  ],
-};
 
 export type Props = {
   connectors: Connector[];
