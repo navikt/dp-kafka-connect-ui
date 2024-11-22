@@ -1,12 +1,16 @@
 "use client";
 
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { useState } from "react";
 import {
-  Popover,
-  PopoverTrigger,
-  PopoverContent,
-} from "@/components/ui/popover";
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Progress } from "@/components/ui/progress";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Collapsible,
@@ -14,139 +18,207 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
   CheckCircle2,
   XCircle,
   AlertCircle,
-  Settings,
+  MoreVertical,
   ChevronDown,
+  ChevronUp,
   Play,
   Pause,
   RotateCw,
 } from "lucide-react";
+import { Connector } from "@/schemas/ui";
 
-export interface Props {
+const mockKafkaConnectData = {
+  name: "My Kafka Connect Instance",
+  connectors: [
+    {
+      name: "Source Connector 1",
+      type: "source",
+      tasks: [
+        { id: 0, status: "running" },
+        { id: 1, status: "running" },
+        { id: 2, status: "failed" },
+      ],
+      config: {
+        "connector.class": "io.confluent.connect.jdbc.JdbcSourceConnector",
+        "tasks.max": "3",
+        "connection.url": "jdbc:mysql://localhost:3306/test_database",
+        mode: "incrementing",
+        "incrementing.column.name": "id",
+        "topic.prefix": "mysql-",
+      },
+    },
+    {
+      name: "Sink Connector 1",
+      type: "sink",
+      tasks: [
+        { id: 0, status: "running" },
+        { id: 1, status: "running" },
+      ],
+      config: {
+        "connector.class":
+          "io.confluent.connect.elasticsearch.ElasticsearchSinkConnector",
+        "tasks.max": "2",
+        topics: "mysql-users",
+        "connection.url": "http://localhost:9200",
+        "type.name": "kafka-connect",
+      },
+    },
+    {
+      name: "Source Connector 2",
+      type: "source",
+      tasks: [
+        { id: 0, status: "running" },
+        { id: 1, status: "paused" },
+      ],
+      config: {
+        "connector.class": "io.confluent.connect.s3.S3SourceConnector",
+        "tasks.max": "2",
+        "s3.bucket.name": "my-bucket",
+        "s3.region": "us-west-2",
+        "format.class": "io.confluent.connect.s3.format.json.JsonFormat",
+        "partitioner.class":
+          "io.confluent.connect.storage.partitioner.DefaultPartitioner",
+      },
+    },
+  ],
+};
+
+export type Props = {
   connectors: Connector[];
-}
-
-export interface Connector {
-  name: string;
-  type: string;
-  tasks: Task[];
-  config: Config;
-  class: string;
-}
-
-export type TaskStatus = "running" | "failed" | "paused";
-
-export interface Task {
-  id: number;
-  status: TaskStatus;
-  worker_id: string;
-}
-
-type Config = Record<string, string>;
-
-function getStatusIcon(status: string) {
-  switch (status) {
-    case "running":
-      return <CheckCircle2 className="w-5 h-5 text-green-500" />;
-    case "failed":
-      return <XCircle className="w-5 h-5 text-red-500" />;
-    case "paused":
-      return <AlertCircle className="w-5 h-5 text-yellow-500" />;
-    default:
-      return null;
-  }
-}
+};
 
 export function KafkaConnectVisualizerComponent({ connectors }: Props) {
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case "running":
+        return <CheckCircle2 className="w-5 h-5 text-green-500" />;
+      case "failed":
+        return <XCircle className="w-5 h-5 text-red-500" />;
+      case "paused":
+        return <AlertCircle className="w-5 h-5 text-yellow-500" />;
+      default:
+        return null;
+    }
+  };
+
+  const getConnectorProgress = (connector: (typeof connectors)[0]) => {
+    const totalTasks = connector.tasks.length;
+    const runningTasks = connector.tasks.filter(
+      (task) => task.status === "running"
+    ).length;
+    return (runningTasks / totalTasks) * 100;
+  };
+
   return (
-    <div className="container mx-auto px-4 py-8 ">
+    <div className="container mx-auto px-4 py-8">
       <h1 className="text-3xl font-bold mb-2">Kafka Connect</h1>
       <p className="text-xl text-muted-foreground mb-8">
         Kafka Connect Instance Overview
       </p>
-      <div className="space-y-6">
-        {connectors.map((connector, index) => (
-          <Card key={index} className="w-full">
-            <CardContent className="p-6">
-              <div className="flex flex-col md:flex-row justify-between mb-6">
-                <div className="flex flex-col flex-grow space-y-2 mb-4 md:mb-0">
-                  <h2 className="text-2xl font-semibold">{connector.name}</h2>
-                  <Badge
-                    variant={
-                      connector.type === "source" ? "default" : "secondary"
-                    }
-                    className="w-fit text-sm"
-                  >
-                    {connector.type}
-                  </Badge>
-                </div>
-                <div className="flex items-center space-x-4">
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button variant="outline" size="icon">
-                        <Settings className="h-4 w-4" />
-                        <span className="sr-only">Connector operations</span>
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-40">
-                      <div className="grid gap-2">
-                        <Button size="sm" className="w-full justify-start">
-                          <Play className="mr-2 h-4 w-4" />
-                          Start
-                        </Button>
-                        <Button size="sm" className="w-full justify-start">
-                          <Pause className="mr-2 h-4 w-4" />
-                          Stop
-                        </Button>
-                        <Button size="sm" className="w-full justify-start">
-                          <RotateCw className="mr-2 h-4 w-4" />
-                          Restart
-                        </Button>
-                      </div>
-                    </PopoverContent>
-                  </Popover>
-                </div>
-              </div>
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 mb-6">
-                {connector.tasks.map((task) => (
-                  <div
-                    key={task.id}
-                    className="flex items-center justify-between p-3 bg-muted rounded-md"
-                  >
-                    <span className="text-sm font-medium">
-                      Task {task.id} - {task.worker_id}
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead className="w-[250px]">Connector Name</TableHead>
+            <TableHead>Type</TableHead>
+            <TableHead>Tasks</TableHead>
+            <TableHead>Progress</TableHead>
+            <TableHead className="text-right">Actions</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {connectors.map((connector, index) => (
+            <TableRow key={index}>
+              <TableCell className="font-medium">{connector.name}</TableCell>
+              <TableCell>
+                <Badge
+                  variant={
+                    connector.type === "source" ? "default" : "secondary"
+                  }
+                >
+                  {connector.type}
+                </Badge>
+              </TableCell>
+              <TableCell>
+                <div className="flex space-x-1">
+                  {connector.tasks.map((task) => (
+                    <span
+                      key={task.id}
+                      title={`Task ${task.id}: ${task.status}`}
+                    >
+                      {getStatusIcon(task.status)}
                     </span>
-                    {getStatusIcon(task.status)}
-                  </div>
-                ))}
-              </div>
-              <Collapsible>
-                <CollapsibleTrigger className="flex items-center text-sm font-medium hover:text-primary transition-colors">
-                  <ChevronDown className="h-4 w-4 mr-1" />
-                  Show Configuration
-                </CollapsibleTrigger>
-                <CollapsibleContent className="mt-4">
-                  <div className="bg-muted p-4 rounded-md">
-                    <h3 className="font-medium mb-3 text-lg">Configuration</h3>
-                    <div className="grid gap-3 md:grid-cols-2">
-                      {Object.entries(connector.config).map(([key, value]) => (
-                        <div key={key} className="flex flex-col space-y-1">
-                          <span className="text-sm font-medium text-muted-foreground text-wrap">
-                            {key}
-                          </span>
-                          <span className="text-sm break-words">
-                            {value as string}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </CollapsibleContent>
-              </Collapsible>
-            </CardContent>
-          </Card>
+                  ))}
+                </div>
+              </TableCell>
+              <TableCell>
+                <Progress
+                  value={getConnectorProgress(connector)}
+                  className="w-[100px]"
+                />
+              </TableCell>
+              <TableCell className="text-right">
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" className="h-8 w-8 p-0">
+                      <span className="sr-only">Open menu</span>
+                      <MoreVertical className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem>
+                      <Play className="mr-2 h-4 w-4" />
+                      <span>Start</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem>
+                      <Pause className="mr-2 h-4 w-4" />
+                      <span>Stop</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem>
+                      <RotateCw className="mr-2 h-4 w-4" />
+                      <span>Restart</span>
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+      <div className="mt-8 space-y-4">
+        {connectors.map((connector, index) => (
+          <Collapsible key={index}>
+            <CollapsibleTrigger className="flex items-center text-sm font-medium hover:text-primary transition-colors">
+              <ChevronDown className="h-4 w-4 mr-1" />
+              {connector.name} Configuration
+            </CollapsibleTrigger>
+            <CollapsibleContent className="mt-2">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Key</TableHead>
+                    <TableHead>Value</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {Object.entries(connector.config).map(([key, value]) => (
+                    <TableRow key={key}>
+                      <TableCell className="font-medium">{key}</TableCell>
+                      <TableCell>{value as string}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CollapsibleContent>
+          </Collapsible>
         ))}
       </div>
     </div>
